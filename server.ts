@@ -46,6 +46,15 @@ function handleGeminiError(error: any, defaultMsg: string): string {
     return "Gemini API Quota Exceeded (429): The standard daily free-tier request limit for the Gemini model has been temporarily reached. You can add your own Gemini API key in the 'Settings > Secrets' menu in AI Studio to resolve this, or simply try again in a bit.";
   }
   
+  if (
+    errMsg.toLowerCase().includes("api key not valid") ||
+    errStr.toLowerCase().includes("api key not valid") ||
+    errMsg.toLowerCase().includes("api_key_invalid") ||
+    errStr.toLowerCase().includes("api_key_invalid")
+  ) {
+    return "Invalid Gemini API Key. Please update your GEMINI_API_KEY in the 'Settings > Secrets' menu in AI Studio with a valid API key.";
+  }
+  
   return error?.message || defaultMsg;
 }
 
