@@ -1,0 +1,6 @@
+{
+  "name": "AI Tile Quantity Takeoff Assistant",
+  "description": "An interactive quantity takeoff workspace and AI-powered assistant for calculating, visualizing, and optimizing tile layouts from 2D drawings and specifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
