@@ -1,6 +1,25 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      const originalError = console.error;
+      console.error = (...args) => {
+        if (typeof args[0] === 'string' && args[0].includes('failed to connect to websocket')) return;
+        if (args[0] && args[0].message && args[0].message.includes('WebSocket closed without opened')) return;
+        originalError.apply(console, args);
+      };
+      window.addEventListener('unhandledrejection', (event) => {
+        if (String(event.reason).includes('WebSocket closed without opened')) {
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('error', (event) => {
+        if (String(event.message).includes('WebSocket closed without opened')) {
+          event.preventDefault();
+        }
+      });
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
