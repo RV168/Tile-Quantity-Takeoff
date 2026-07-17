@@ -12,26 +12,35 @@ export default function App() {
   // 1. Core specs state
   const [roomSpec, setRoomSpec] = useState<RoomSpec>({
     shape: "Rectangular",
-    widthMm: 4000,
+    widthMm: 3000,
     heightMm: 3000,
     indentWidthMm: 1200,
     indentHeightMm: 1200,
   });
 
   const [tileSpec, setTileSpec] = useState<TileSpec>({
-    widthMm: 600,
-    heightMm: 600,
+    widthMm: 100,
+    heightMm: 100,
     thicknessMm: 10,
-    tileType: "Porcelain",
-    material: "Refined Clay",
-    finish: "Matte",
+    tileType: "Cobblestone",
+    material: "Natural Stone",
+    finish: "Textured",
     orientation: "Portrait",
-    pattern: "Straight",
-    groutWidthMm: 3,
+    pattern: "Radial Cobblestone",
+    groutWidthMm: 5,
     perimeterJointMm: 6,
   });
 
-  const [openings, setOpenings] = useState<Opening[]>([]);
+  const [openings, setOpenings] = useState<Opening[]>([
+    {
+      id: "op-floor-trap-1",
+      type: "Floor Trap",
+      widthMm: 500,
+      heightMm: 500,
+      xMm: 1250,
+      yMm: 1250,
+    }
+  ]);
   const [startingPoint, setStartingPoint] = useState<StartingPoint>("Center");
   const [customOffsetX, setCustomOffsetX] = useState(0);
   const [customOffsetY, setCustomOffsetY] = useState(0);

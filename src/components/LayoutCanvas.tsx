@@ -204,25 +204,27 @@ export default function LayoutCanvas({
   const maxRow = rowsNeeded;
 
   const overlayTiles: { x: number; y: number; w: number; h: number; row: number; col: number }[] = [];
-  for (let r = minRow; r <= maxRow; r++) {
-    for (let c = minCol; c <= maxCol; c++) {
-      let tx = startX + c * stepW;
-      let ty = startY + r * stepH;
+  if (tileSpec.pattern !== "Radial Cobblestone") {
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        let tx = startX + c * stepW;
+        let ty = startY + r * stepH;
 
-      if (tileSpec.pattern === "Brick Bond" && Math.abs(r) % 2 === 1) {
-        tx += stepW / 2;
-      } else if (tileSpec.pattern === "Diagonal") {
-        tx += (r % 2) * (stepW / 2);
+        if (tileSpec.pattern === "Brick Bond" && Math.abs(r) % 2 === 1) {
+          tx += stepW / 2;
+        } else if (tileSpec.pattern === "Diagonal") {
+          tx += (r % 2) * (stepW / 2);
+        }
+
+        overlayTiles.push({
+          x: tx,
+          y: ty,
+          w: tileW,
+          h: tileH,
+          row: r,
+          col: c
+        });
       }
-
-      overlayTiles.push({
-        x: tx,
-        y: ty,
-        w: tileW,
-        h: tileH,
-        row: r,
-        col: c
-      });
     }
   }
 
@@ -482,6 +484,7 @@ export default function LayoutCanvas({
                     stroke={showTileBorders ? strokeColor : "none"}
                     strokeWidth={showTileBorders ? "1" : "0"}
                     strokeDasharray={strokeDash}
+                    transform={t.rotation !== undefined ? `rotate(${t.rotation} ${px + pw/2} ${py + ph/2})` : undefined}
                   />
 
                   {/* Draw cut markings or dimension labels inside cuts if they are large enough */}
@@ -532,21 +535,37 @@ export default function LayoutCanvas({
               const opY = toPxY(op.yMm);
               const opW = toPxLength(op.widthMm);
               const opH = toPxLength(op.heightMm);
+              const opCx = toPxX(op.xMm + op.widthMm / 2);
+              const opCy = toPxY(op.yMm + op.heightMm / 2);
 
               return (
                 <g key={op.id}>
                   {/* Red/Gray Hatching for deduction area */}
-                  <rect
-                    x={opX}
-                    y={opY}
-                    width={opW}
-                    height={opH}
-                    fill="url(#openingHatch)"
-                    stroke={isDarkMode ? "#475569" : "#64748b"}
-                    strokeWidth="1.5"
-                    strokeDasharray="4,2"
-                    className="opacity-70"
-                  />
+                  {op.shape === "Circular" ? (
+                    <ellipse
+                      cx={opCx}
+                      cy={opCy}
+                      rx={opW / 2}
+                      ry={opH / 2}
+                      fill="url(#openingHatch)"
+                      stroke={isDarkMode ? "#475569" : "#64748b"}
+                      strokeWidth="1.5"
+                      strokeDasharray="4,2"
+                      className="opacity-70"
+                    />
+                  ) : (
+                    <rect
+                      x={opX}
+                      y={opY}
+                      width={opW}
+                      height={opH}
+                      fill="url(#openingHatch)"
+                      stroke={isDarkMode ? "#475569" : "#64748b"}
+                      strokeWidth="1.5"
+                      strokeDasharray="4,2"
+                      className="opacity-70"
+                    />
+                  )}
                   {/* Solid background behind text */}
                   <rect
                     x={opX + 4}
@@ -572,7 +591,7 @@ export default function LayoutCanvas({
                     textAnchor="middle"
                     className="text-[8px] fill-slate-600 font-bold font-mono"
                   >
-                    {op.widthMm}x{op.heightMm} mm
+                    {op.shape === "Circular" ? `Ø${op.widthMm} mm` : `${op.widthMm}x${op.heightMm} mm`}
                   </text>
                 </g>
               );

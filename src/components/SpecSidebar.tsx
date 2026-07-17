@@ -45,6 +45,7 @@ export default function SpecSidebar({
   setSuggestedWastagePercent,
 }: SpecSidebarProps) {
   const [newOpType, setNewOpType] = useState<OpeningType>("Floor Trap");
+  const [newOpShape, setNewOpShape] = useState<"Rectangular" | "Circular">("Rectangular");
   const [newOpW, setNewOpW] = useState<number>(300);
   const [newOpH, setNewOpH] = useState<number>(300);
 
@@ -56,8 +57,9 @@ export default function SpecSidebar({
     const newOpening: Opening = {
       id: `op-${Date.now()}`,
       type: newOpType,
+      shape: newOpShape,
       widthMm: newOpW,
-      heightMm: newOpH,
+      heightMm: newOpShape === "Circular" ? newOpW : newOpH,
       xMm,
       yMm,
     };
@@ -69,8 +71,8 @@ export default function SpecSidebar({
   };
 
   const updateOpening = (id: string, field: keyof Opening, value: number) => {
-    setOpenings(
-      openings.map((op) => {
+    setOpenings((prev) =>
+      prev.map((op) => {
         if (op.id === id) {
           return { ...op, [field]: value };
         }
@@ -692,6 +694,13 @@ export default function SpecSidebar({
                       <rect x="3" y="13" width="8" height="8" rx="1" />
                       <rect x="13" y="13" width="8" height="8" rx="1" />
                     </svg>
+                  )},
+                  { name: "Radial Cobblestone", label: "Radial (Cobble)", icon: (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="12" cy="12" r="3" />
+                      <circle cx="12" cy="12" r="6" strokeDasharray="2 2" />
+                      <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+                    </svg>
                   )}
                 ].map((ptn) => (
                   <button
@@ -791,8 +800,8 @@ export default function SpecSidebar({
           </div>
 
           <div className="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-1">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
                 <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Type</label>
                 <select
                   value={newOpType}
@@ -807,24 +816,61 @@ export default function SpecSidebar({
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">W (mm)</label>
-                <input
-                  type="number"
-                  value={newOpW}
-                  onChange={(e) => setNewOpW(Math.max(10, Number(e.target.value)))}
-                  className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">H/L (mm)</label>
-                <input
-                  type="number"
-                  value={newOpH}
-                  onChange={(e) => setNewOpH(Math.max(10, Number(e.target.value)))}
-                  className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
-                />
+                <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Shape</label>
+                <select
+                  value={newOpShape}
+                  onChange={(e) => setNewOpShape(e.target.value as "Rectangular" | "Circular")}
+                  className="w-full text-slate-800 dark:text-slate-200 text-[11px] p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
+                >
+                  <option value="Rectangular">Rectangular</option>
+                  <option value="Circular">Circular</option>
+                </select>
               </div>
             </div>
+            
+            {newOpShape === "Circular" ? (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Diameter (D) - mm</label>
+                  <input
+                    type="number"
+                    value={newOpW}
+                    onChange={(e) => setNewOpW(Math.max(10, Number(e.target.value)))}
+                    className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Radius (r) - mm</label>
+                  <input
+                    type="number"
+                    value={Math.round(newOpW / 2)}
+                    onChange={(e) => setNewOpW(Math.max(10, Number(e.target.value) * 2))}
+                    className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">W (mm)</label>
+                  <input
+                    type="number"
+                    value={newOpW}
+                    onChange={(e) => setNewOpW(Math.max(10, Number(e.target.value)))}
+                    className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">H/L (mm)</label>
+                  <input
+                    type="number"
+                    value={newOpH}
+                    onChange={(e) => setNewOpH(Math.max(10, Number(e.target.value)))}
+                    className="w-full text-slate-800 dark:text-slate-200 text-xs p-1.5 border border-slate-200 dark:border-slate-700 rounded-md bg-white dark:bg-slate-900"
+                  />
+                </div>
+              </div>
+            )}
             <button
               onClick={addOpening}
               className="w-full flex items-center justify-center gap-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
@@ -849,20 +895,36 @@ export default function SpecSidebar({
                   </div>
                   <div className="grid grid-cols-4 gap-1.5">
                     <div>
-                      <label className="block text-[9px] text-slate-500 dark:text-slate-400">Width</label>
+                      <label className="block text-[9px] text-slate-500 dark:text-slate-400">
+                        {op.shape === "Circular" ? "Diameter" : "Width"}
+                      </label>
                       <input
                         type="number"
                         value={op.widthMm}
-                        onChange={(e) => updateOpening(op.id, "widthMm", Number(e.target.value))}
+                        onChange={(e) => {
+                          const val = Math.max(10, Number(e.target.value) || 10);
+                          updateOpening(op.id, "widthMm", val);
+                          if (op.shape === "Circular") updateOpening(op.id, "heightMm", val);
+                        }}
                         className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded text-[11px]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[9px] text-slate-500 dark:text-slate-400">Height</label>
+                      <label className="block text-[9px] text-slate-500 dark:text-slate-400">
+                        {op.shape === "Circular" ? "Radius" : "Height"}
+                      </label>
                       <input
                         type="number"
-                        value={op.heightMm}
-                        onChange={(e) => updateOpening(op.id, "heightMm", Number(e.target.value))}
+                        value={op.shape === "Circular" ? Math.round(op.widthMm / 2) : op.heightMm}
+                        onChange={(e) => {
+                          if (op.shape === "Circular") {
+                            const val = Math.max(10, (Number(e.target.value) || 5) * 2);
+                            updateOpening(op.id, "widthMm", val);
+                            updateOpening(op.id, "heightMm", val);
+                          } else {
+                            updateOpening(op.id, "heightMm", Math.max(10, Number(e.target.value) || 10));
+                          }
+                        }}
                         className="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-1 border border-slate-200 dark:border-slate-700 rounded text-[11px]"
                       />
                     </div>

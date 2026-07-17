@@ -76,13 +76,25 @@ export function isPointInRoom(x: number, y: number, room: RoomSpec): boolean {
  */
 export function isPointInOpenings(x: number, y: number, openings: Opening[]): boolean {
   for (const op of openings) {
-    if (
-      x >= op.xMm &&
-      x <= op.xMm + op.widthMm &&
-      y >= op.yMm &&
-      y <= op.yMm + op.heightMm
-    ) {
-      return true;
+    if (op.shape === "Circular") {
+      const cx = op.xMm + op.widthMm / 2;
+      const cy = op.yMm + op.heightMm / 2;
+      const rx = op.widthMm / 2;
+      const ry = op.heightMm / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1) {
+        return true;
+      }
+    } else {
+      if (
+        x >= op.xMm &&
+        x <= op.xMm + op.widthMm &&
+        y >= op.yMm &&
+        y <= op.yMm + op.heightMm
+      ) {
+        return true;
+      }
     }
   }
   return false;
@@ -101,12 +113,19 @@ export function calculateTileCoverage(
   openings: Opening[],
   row: number,
   col: number,
-  id: string
+  id: string,
+  rotation: number = 0
 ): CalculatedTile {
   // Test points inside the tile (a 5x5 grid) to find accurate coverage and cuts
   let insideCount = 0;
   let openingCount = 0;
   const steps = 5;
+  
+  const cx = tx + tw / 2;
+  const cy = ty + th / 2;
+  const theta = rotation * Math.PI / 180;
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
   
   for (let i = 0; i < steps; i++) {
     for (let j = 0; j < steps; j++) {
@@ -114,9 +133,19 @@ export function calculateTileCoverage(
       const px = tx + (tw * (i + 0.5)) / steps;
       const py = ty + (th * (j + 0.5)) / steps;
 
-      const inRoom = isPointInRoom(px, py, room);
+      let testX = px;
+      let testY = py;
+      
+      if (rotation !== 0) {
+        const dx = px - cx;
+        const dy = py - cy;
+        testX = cx + dx * cos - dy * sin;
+        testY = cy + dx * sin + dy * cos;
+      }
+
+      const inRoom = isPointInRoom(testX, testY, room);
       if (inRoom) {
-        if (isPointInOpenings(px, py, openings)) {
+        if (isPointInOpenings(testX, testY, openings)) {
           openingCount++;
         } else {
           insideCount++;
@@ -206,6 +235,7 @@ export function calculateTileCoverage(
     cutWidthMm,
     cutHeightMm,
     reusable,
+    rotation,
   };
 }
 
@@ -275,36 +305,103 @@ export function performTakeoff(
 
   const calculatedTiles: CalculatedTile[] = [];
 
-  for (let r = minRow; r <= maxRow; r++) {
-    for (let c = minCol; c <= maxCol; c++) {
-      // Tile top-left coordinates before shifts
-      let tx = startX + c * stepW;
-      let ty = startY + r * stepH;
+  if (tile.pattern === "Radial Cobblestone") {
+    // Generate concentric rings starting from center
+    const maxDist = Math.sqrt(W * W + H * H);
+    // Determine the center offset. startX, startY represent the logical origin.
+    // For "Center", startX/Y was offset to the top-left of the center tile.
+    // Let's get the absolute center point based on startingPoint choice.
+    let originX = startX;
+    let originY = startY;
+    
+    // Look for a floor trap opening to center around
+    const floorTrap = openings.find(op => op.type === "Floor Trap");
+    
+    if (floorTrap) {
+      originX = floorTrap.xMm + floorTrap.widthMm / 2;
+      originY = floorTrap.yMm + floorTrap.heightMm / 2;
+    } else if (startingPoint === "Center") {
+      originX = W / 2;
+      originY = H / 2;
+    } else {
+      // For other anchors, just use startX/startY as the center of the radial pattern
+      originX = startX;
+      originY = startY;
+    }
 
-      // Pattern shifts
-      if (tile.pattern === "Brick Bond" && Math.abs(r) % 2 === 1) {
-        // Shift alternating rows by 50%
-        tx += stepW / 2;
-      } else if (tile.pattern === "Quarter Bond") {
-        tx += (Math.abs(r) % 4) * (stepW * 0.25);
-      } else if (tile.pattern === "One-Third Bond") {
-        tx += (Math.abs(r) % 3) * (stepW / 3);
+    const numRings = Math.ceil(maxDist / stepH);
+    let tileIdCounter = 0;
+    
+    // Core tile at center
+    const cx = originX - tileW / 2;
+    const cy = originY - tileH / 2;
+    const coreId = `tile-radial-0`;
+    const coreData = calculateTileCoverage(cx, cy, tileW, tileH, room, openings, 0, 0, coreId, 0);
+    if (coreData.isInside) calculatedTiles.push(coreData);
+    tileIdCounter++;
+
+    for (let r = 1; r <= numRings; r++) {
+      const radius = r * stepH;
+      const circumference = 2 * Math.PI * radius;
+      // Stagger spacing by adding extra grout allowance or spacing
+      const numTilesInRing = Math.max(1, Math.floor(circumference / stepW));
+      const angleStep = (2 * Math.PI) / numTilesInRing;
+      
+      // Add a slight stagger offset per ring to look like cobblestone
+      const ringOffset = (r % 2 === 0) ? (angleStep / 2) : 0;
+
+      for (let i = 0; i < numTilesInRing; i++) {
+        const theta = i * angleStep + ringOffset;
+        // Center of the tile
+        const tCenterX = originX + radius * Math.cos(theta);
+        const tCenterY = originY + radius * Math.sin(theta);
+        
+        // Top-left of the tile for layout drawing
+        const tx = tCenterX - tileW / 2;
+        const ty = tCenterY - tileH / 2;
+        
+        const rotationDeg = (theta * 180) / Math.PI + 90; // Rotate so top faces outward
+        
+        const id = `tile-radial-${tileIdCounter++}`;
+        const tileData = calculateTileCoverage(tx, ty, tileW, tileH, room, openings, r, i, id, rotationDeg);
+        
+        if (tileData.isInside) {
+          calculatedTiles.push(tileData);
+        }
       }
+    }
+  } else {
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        // Tile top-left coordinates before shifts
+        let tx = startX + c * stepW;
+        let ty = startY + r * stepH;
 
-      // Diagonal patterns (rotates layout by 45 deg)
-      // To simulate diagonal pattern simply for calculation & visual display:
-      // We can skew/offset columns of each row, or we can transform coordinates.
-      // Let's implement dynamic stagger for diagonal approximation,
-      // or compute actual intersections.
-      if (tile.pattern === "Diagonal") {
-        tx += (r % 2) * (stepW / 2);
-      }
+        // Pattern shifts
+        if (tile.pattern === "Brick Bond" && Math.abs(r) % 2 === 1) {
+          // Shift alternating rows by 50%
+          tx += stepW / 2;
+        } else if (tile.pattern === "Quarter Bond") {
+          tx += (Math.abs(r) % 4) * (stepW * 0.25);
+        } else if (tile.pattern === "One-Third Bond") {
+          tx += (Math.abs(r) % 3) * (stepW / 3);
+        }
 
-      const id = `tile-${r}-${c}`;
-      const tileData = calculateTileCoverage(tx, ty, tileW, tileH, room, openings, r, c, id);
+        // Diagonal patterns (rotates layout by 45 deg)
+        // To simulate diagonal pattern simply for calculation & visual display:
+        // We can skew/offset columns of each row, or we can transform coordinates.
+        // Let's implement dynamic stagger for diagonal approximation,
+        // or compute actual intersections.
+        if (tile.pattern === "Diagonal") {
+          tx += (r % 2) * (stepW / 2);
+        }
 
-      if (tileData.isInside) {
-        calculatedTiles.push(tileData);
+        const id = `tile-${r}-${c}`;
+        const tileData = calculateTileCoverage(tx, ty, tileW, tileH, room, openings, r, c, id, 0);
+
+        if (tileData.isInside) {
+          calculatedTiles.push(tileData);
+        }
       }
     }
   }

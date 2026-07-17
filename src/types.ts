@@ -8,7 +8,8 @@ export type LayingPattern =
   | "One-Third Bond"
   | "Basketweave"
   | "Diagonal" 
-  | "Herringbone";
+  | "Herringbone"
+  | "Radial Cobblestone";
 
 export type TileOrientation = "Portrait" | "Landscape";
 
@@ -40,6 +41,7 @@ export interface RoomSpec {
 export interface Opening {
   id: string;
   type: OpeningType;
+  shape?: "Rectangular" | "Circular";
   widthMm: number;
   heightMm: number;
   xMm: number; // relative to room top-left
@@ -64,6 +66,7 @@ export interface CalculatedTile {
   cutHeightMm: number;
   // If partial, can we salvage?
   reusable: boolean;
+  rotation?: number; // in degrees
 }
 
 export interface LayoutResult {
